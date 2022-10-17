@@ -11,7 +11,7 @@ const client = new tmi.Client({
     options: { debug: true },
     identity: {
         username: process.env.TWITCH_BOT_USERNAME,
-        password: process.env.TWITCH_OAUTH_TOKEN,
+        password: process.env.OAUTH_TOKEN,
     },
     channels: ['pujzz', 'Tolatos', 'Hotbear1110']
 });
@@ -21,7 +21,7 @@ client.connect().catch(console.error);
 
 let count = 0
 let heardTheCount = false
-const users = {}
+const avoid = '/'
 
 client.on('message', (channel, tags, message, self) => {
 
@@ -94,8 +94,9 @@ client.on('message', (channel, tags, message, self) => {
         sentence.shift()
         sentence.shift()
         sentence = sentence.join(" ")
-        console.log(sentence)
+        //console.log(sentence)
         client.say(channel, `${sentence}`)
+        
 
     }
 
@@ -134,6 +135,8 @@ client.on('message', (channel, tags, message, self) => {
     if ((message.toLowerCase().startsWith('pb colorge'))) {
         client.say(channel, `@${tags.username} has ${tags.color} color`)
     }
+
+
 
 
 
