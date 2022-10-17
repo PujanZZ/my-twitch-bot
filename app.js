@@ -60,7 +60,7 @@ client.on('message', (channel, tags, message, self) => {
             }
         }
         catch (err) {
-            console.log(`error ${err}`)
+            console.log(`error`)
         }
 
 
@@ -81,7 +81,7 @@ client.on('message', (channel, tags, message, self) => {
         }
         catch (err) {
             console.log('error')
-            //client.say(channel, `FeelsDankMan error`)
+            
         }
 
     }
@@ -105,7 +105,7 @@ client.on('message', (channel, tags, message, self) => {
         client.say(channel, `pb ping, pb say, pb advice, pb life, pb bing, pb mod`)
     }
 
-    
+
     //
     //console.log(isMod)
     //https://tmi.twitch.tv/group/user/${channel}/chatters 
