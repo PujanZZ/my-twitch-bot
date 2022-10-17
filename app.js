@@ -3,7 +3,7 @@ require('dotenv').config()
 
 const { default: fetch } = require("node-fetch");
 const tmi = require('tmi.js');
-//const gethelp = require('./commands/quote')
+
 
 
 
@@ -13,7 +13,7 @@ const client = new tmi.Client({
         username: process.env.TWITCH_BOT_USERNAME,
         password: process.env.TWITCH_OAUTH_TOKEN,
     },
-    channels: ['pujzz', 'Tolatos','Hotbear1110']
+    channels: ['pujzz', 'Tolatos', 'Hotbear1110']
 });
 
 client.connect().catch(console.error);
@@ -35,27 +35,32 @@ client.on('message', (channel, tags, message, self) => {
 
     async function getUser() {
 
-        const response = await fetch(`https://tmi.twitch.tv/group/user/${channelkek}/chatters`);
-        const data = await response.json()
+        try {
+            const response = await fetch(`https://tmi.twitch.tv/group/user/${channelkek}/chatters`);
+            const data = await response.json()
 
-        //console.log(data)
-        const streamer = data.chatters.broadcaster
-        const imchicken = data.chatters.moderators
-        const vips = data.chatters.vips
-        const viewerlul = data.chatters.viewers
-        const finalList = streamer.concat(imchicken, vips, viewerlul)
-        const randomArr = Math.floor(Math.random() * finalList.length);
-        const randomItem = finalList[randomArr]
+            //console.log(data)
+            const streamer = data.chatters.broadcaster
+            const imchicken = data.chatters.moderators
+            const vips = data.chatters.vips
+            const viewerlul = data.chatters.viewers
+            const finalList = streamer.concat(imchicken, vips, viewerlul)
+            const randomArr = Math.floor(Math.random() * finalList.length);
+            const randomItem = finalList[randomArr]
 
-        if (message === 'pb streamer') {
-            client.say(channel, `Broadcaster of the channel is: ${streamer} TriHard`)
+            if (message === 'pb streamer') {
+                client.say(channel, `Broadcaster of the channel is: ${streamer} TriHard`)
 
+            }
+
+
+            if (message.toLowerCase().startsWith('pb bing')) {
+                console.log(randomItem)
+                client.say(channel, `Smadging get binged idiot, ${randomItem}`)
+            }
         }
-
-
-        if (message.toLowerCase().startsWith('pb bing')) {
-            console.log(randomItem)
-            client.say(channel, `Smadging get binged idiot, ${randomItem}`)
+        catch (err) {
+            console.log(`error ${err}`)
         }
 
 
@@ -65,13 +70,18 @@ client.on('message', (channel, tags, message, self) => {
 
     const getHelp = async () => {
 
-        const quote = await fetch(`https://api.adviceslip.com/advice`);
-        const line = await quote.json()
-        //console.log(line.slip)
-
-        if (message.startsWith('pb advice')) {
-            client.say(channel,`@${tags.username} ${line.slip.advice} ok`)
+        try {
+            const quote = await fetch(`https://api.adviceslip.com/advice`);
+            const line = await quote.json()
             //console.log(line.slip)
+            if (message.startsWith('pb advice')) {
+                client.say(channel, `@${tags.username} ${line.slip.advice} ok`)
+
+            }
+        }
+        catch (err) {
+            console.log('error')
+            //client.say(channel, `FeelsDankMan error`)
         }
 
     }
@@ -95,38 +105,14 @@ client.on('message', (channel, tags, message, self) => {
         client.say(channel, `pb ping, pb say, pb advice, pb life, pb bing, pb mod`)
     }
 
+    
     //
-
-
-
-
-
-    //const isBadge = tags.badges
     //console.log(isMod)
     //https://tmi.twitch.tv/group/user/${channel}/chatters 
 
-    //some count stuff
-
-    if (message === '!start' && allowedUsers === 'pujzz') {
-        heardTheCount = true
-        client.say(channel, `${tags.username}, can type 'fors' now.`)
-    } else if (message === '!stop' && allowedUsers === 'pujzz') {
-        heardTheCount = false
-    } else if (heardTheCount && message === 'fors') {
-        users[tags.username] = true
-        const kek = Object.keys(users).length
-        console.log(kek)
-        client.say(channel, `Count:  ${kek}`)
-        console.log(users)
-    }
-
-    //
-
-
-
 
     if (self) return;
-    if (message.toLowerCase().startsWith('pb botge') && isNotBot) {
+    if (message.toLowerCase().startsWith('pb ping') && isNotBot) {
         client.say(channel, `@${tags.username}, TriHard !!`);
 
     }
@@ -149,7 +135,7 @@ client.on('message', (channel, tags, message, self) => {
         client.say(channel, `@${tags.username} has ${tags.color} color`)
     }
 
-    
+
 
 
 });
