@@ -1,148 +1,121 @@
-require('dotenv').config()
+require('dotenv').config();
 
-
-const { default: fetch } = require("node-fetch");
 const tmi = require('tmi.js');
+const fs = require('fs');
+const data = JSON.parse(fs.readFileSync('service/combined_rankings.json', 'utf-8'));
 
-
-
+const twitchBotUsername = process.env.TWITCH_BOT_USERNAME;
+const oauthToken = process.env.TWITCH_CHAT_OAUTH;
 
 const client = new tmi.Client({
     options: { debug: true },
     identity: {
-        username: process.env.TWITCH_BOT_USERNAME,
-        password: process.env.OAUTH_TOKEN,
+        username: twitchBotUsername,
+        password: oauthToken,
     },
-    channels: ['pujzz', 'Tolatos', 'Hotbear1110']
+    channels: ['pujzz'],
 });
+
+const commandPrefix = '!cs';
 
 client.connect().catch(console.error);
 
-
-let count = 0
-let heardTheCount = false
-const avoid = '/'
-
 client.on('message', (channel, tags, message, self) => {
-
-
-    const channelkek = channel.replace(/#(?=\S)/g, '')
-    const isNotBot = tags.username.toLowerCase() !== process.env.TWITCH_BOT_USERNAME
-
-    const allowedUsers = tags.username.toLowerCase()
-    const isMod = tags['user-type']
-
-
-    async function getUser() {
-
-        try {
-            const response = await fetch(`https://tmi.twitch.tv/group/user/${channelkek}/chatters`);
-            const data = await response.json()
-
-            //console.log(data)
-            const streamer = data.chatters.broadcaster
-            const imchicken = data.chatters.moderators
-            const vips = data.chatters.vips
-            const viewerlul = data.chatters.viewers
-            const finalList = streamer.concat(imchicken, vips, viewerlul)
-            const randomArr = Math.floor(Math.random() * finalList.length);
-            const randomItem = finalList[randomArr]
-
-            if (message === 'pb streamer') {
-                client.say(channel, `Broadcaster of the channel is: ${streamer} TriHard`)
-
-            }
-
-
-            if (message.toLowerCase().startsWith('pb bing')) {
-                console.log(randomItem)
-                client.say(channel, `Smadging get binged idiot, ${randomItem}`)
-            }
-        }
-        catch (err) {
-            console.log(`error`)
-        }
-
-
-    }
-
-    getUser()
-
-    const getHelp = async () => {
-
-        try {
-            const quote = await fetch(`https://api.adviceslip.com/advice`);
-            const line = await quote.json()
-            //console.log(line.slip)
-            if (message.startsWith('pb advice')) {
-                client.say(channel, `@${tags.username} ${line.slip.advice} ok`)
-
-            }
-        }
-        catch (err) {
-            console.log('error')
-            
-        }
-
-    }
-    getHelp()
-
-
-
-    if (message.startsWith('pb say')) {
-        let sentence = message.split(' ')
-        sentence.shift()
-        sentence.shift()
-        sentence = sentence.join(" ")
-        //console.log(sentence)
-        client.say(channel, `${sentence}`)
-        
-
-    }
-
-    //
-
-    if (message === 'pb help') {
-        client.say(channel, `pb ping, pb say, pb advice, pb life, pb bing, pb mod`)
-    }
-
-
-    //
-    //console.log(isMod)
-    //https://tmi.twitch.tv/group/user/${channel}/chatters 
-
-
     if (self) return;
-    if (message.toLowerCase().startsWith('pb ping') && isNotBot) {
-        client.say(channel, `@${tags.username}, TriHard !!`);
+    const prefix = commandPrefix.toLowerCase();
 
+    if (message.toLowerCase().startsWith(prefix)) {
+        // Remove prefix and trim
+        const commandBody = message.slice(prefix.length).trim();
+
+        // Try to split on ' vs ' case insensitive
+        // Using a regex to split on ' vs ' ignoring case and spaces around it
+        const teams = commandBody.split(/ vs /i);
+
+        if (teams.length === 2) {
+            const teamA = teams[0].trim();
+            const teamB = teams[1].trim();
+
+            // Get data for each team
+            let team1Json = getCombinedTeamData(teamA);
+            let team2Json = getCombinedTeamData(teamB);
+
+            //monte carlo
+            // let results = monteCarloWinProbability(team1Json, team2Json, 500);
+
+            //elo
+            let results = eloWinProbability(team1Json, team2Json);
+
+            console.log(results);
+
+
+            // Log nicely
+            // console.log("=== Monte Carlo Win Probability ===");
+            // console.log(`Team A: ${results.teamA} - Win Rate: ${results.teamAWinRate.toFixed(2)}%`);
+            // console.log(`Team B: ${results.teamB} - Win Rate: ${results.teamBWinRate.toFixed(2)}%`);
+            // console.log("===================================");
+
+            const chatMessage = `@${tags.username} ${results.teamA} vs ${results.teamB} — ` +
+                `${results.teamA}: ${results.teamAWinRate.toFixed(2)}% chance to win, ` +
+                `${results.teamB}: ${results.teamBWinRate.toFixed(2)}% chance to win.`;
+
+            client.say(channel, chatMessage);
+        }
     }
-
-    const randomMath = Math.floor(Math.random() * 101);
-    if (isNotBot && message.toLowerCase().startsWith('pb life')) {
-        client.say(channel, `${tags.username} you have ${randomMath} yil left! better GETALIFE`)
-    }
-
-
-    if (message.toLowerCase().startsWith('pb mod') && isMod === 'mod') {
-        client.say(channel, `@${tags.username} is a mod. MODS`)
-    } else if (message.toLowerCase().startsWith('pb mod') && isMod !== 'mod') {
-        client.say(channel, `@${tags.username} is not a mod.`)
-    }
-
-
-
-    if ((message.toLowerCase().startsWith('pb colorge'))) {
-        client.say(channel, `@${tags.username} has ${tags.color} color`)
-    }
-
-
-
-
-
-
 });
 
 
+function monteCarloWinProbability(teamA, teamB, iterations) {
+    const strengthA = teamA.points ?? (1 / teamA.rank);
+    const strengthB = teamB.points ?? (1 / teamB.rank);
+
+    let winsA = 0;
+    let winsB = 0;
+
+    for (let i = 0; i < iterations; i++) {
+        const totalStrength = strengthA + strengthB;
+        const rand = Math.random() * totalStrength;
+        if (rand < strengthA) {
+            winsA++;
+        } else {
+            winsB++;
+        }
+    }
+
+    return {
+        teamA: teamA.name,
+        teamAWinRate: (winsA / iterations) * 100,
+        teamB: teamB.name,
+        teamBWinRate: (winsB / iterations) * 100
+    };
+}
+
+function getCombinedTeamData(teamName) {
+    const hltvTeam = data.hltv.teams.find(t => t.name.toLowerCase() === teamName.toLowerCase());
+    const valveTeam = data.valve.teams.find(t => t.name.toLowerCase() === teamName.toLowerCase());
+
+    if (!hltvTeam && !valveTeam) return null;
+
+    return {
+        name: teamName,
+        rank: hltvTeam?.rank ?? valveTeam?.rank ?? null,
+        points: hltvTeam?.points ?? valveTeam?.points ?? null
+    };
+}
 
 
+//  ELO
+
+function eloWinProbability(teamA, teamB) {
+    const eloDiff = teamB.points  - teamA.points;
+
+    const pA = 1 / (1 + Math.pow(10, eloDiff / 400));
+    const pB = 1 - pA;
+
+    return {
+        teamA: teamA.name,
+        teamAWinRate: pA * 100,
+        teamB: teamB.name,
+        teamBWinRate: pB * 100
+    };
+}
